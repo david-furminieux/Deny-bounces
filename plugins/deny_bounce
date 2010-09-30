@@ -42,20 +42,31 @@ SOFTWARE.
 =cut
 
 sub register {
-    my ( $self, $qp, @args ) = @_;
+    my ($self, $qp, @args) = @_;
 
 }
 
+sub hook_mail {
+    my ($self,$transaction, $sender) = @_;
+    # $sender: an Qpsmtpd::Address object for sender of the message
+
+    return (DENY_DISCONNECT, "We dont accept Mailer Daemon Mails")
+      unless ($sender->address =~ /\@/);
+
+    return (OK);
+}
+
 sub hook_data_post {
-    my ( $self, $transaction ) = @_;
+    my ($self, $transaction) = @_;
 
-    return ( DENY, "We dont accept Mailer Daemon Mails" )
-      unless $self->qp->transaction->header->get('From');
 
-    if ( $self->qp->transaction->header->get('Content-Type') ) {
-        return ( DENY, "We dont accept Mailer Daemon Mails" )
-          if ( $self->qp->transaction->header->get('Content-Type') =~
-            /report\-type=delivery\-status/ );
+    if ($self->qp->transaction->header) {
+
+        if ($self->qp->transaction->header->get('Content-Type')) {
+            return (DENY_DISCONNECT, "We dont accept Mailer Daemon Mails")
+              if ($self->qp->transaction->header->get('Content-Type') =~
+                  /report\-type=delivery\-status/);
+        }
     }
 
     # Dont do any actions -> decline action
